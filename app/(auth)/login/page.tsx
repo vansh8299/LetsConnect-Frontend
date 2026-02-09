@@ -1,38 +1,155 @@
 // app/login/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Header from "@/app/components/ui/Header";
-import Footer from "@/app/components/ui/Footer";
 import { Chrome } from "lucide-react";
+import { authService } from "@/app/lib/services/auth.service";
+
+interface ValidationErrors {
+  email?: string;
+  password?: string;
+}
 
 export default function LoginPage() {
   const router = useRouter();
+   const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
+  const [errors, setErrors] = useState<ValidationErrors>({});
+  const [touched, setTouched] = useState({
+    email: false,
+    password: false,
+  });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+useEffect(() => {
+    const authStatus = searchParams.get("auth");
+    const error = searchParams.get("error");
+
+    if (authStatus === "success") {
+      // Successfully authenticated via Google OAuth
+      router.push("/");
+    } else if (error) {
+      // Handle OAuth errors
+      const errorMessages: Record<string, string> = {
+        auth_failed: "Google authentication failed. Please try again.",
+        no_user: "Unable to retrieve user information. Please try again.",
+      };
+      setError(errorMessages[error] || "Authentication failed");
+    }
+  }, [searchParams, router]);
+
+  
+
+  // Load saved email on component mount
+  useEffect(() => {
+    const savedEmail = localStorage.getItem("rememberedEmail");
+    if (savedEmail) {
+      setFormData((prev) => ({ ...prev, email: savedEmail }));
+      setRememberMe(true);
+    }
+  }, []);
+
+  const validateEmail = (email: string): string | undefined => {
+    if (!email) {
+      return "Email is required";
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return "Please enter a valid email address";
+    }
+    return undefined;
+  };
+
+  const validatePassword = (password: string): string | undefined => {
+    if (!password) {
+      return "Password is required";
+    }
+    if (password.length < 8) {
+      return "Password must be at least 8 characters";
+    }
+    return undefined;
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: ValidationErrors = {
+      email: validateEmail(formData.email),
+      password: validatePassword(formData.password),
+    };
+
+    setErrors(newErrors);
+    setTouched({ email: true, password: true });
+
+    return !Object.values(newErrors).some((error) => error !== undefined);
+  };
+
+  const handleBlur = (field: keyof typeof formData) => {
+    setTouched({ ...touched, [field]: true });
+
+    if (field === "email") {
+      setErrors({ ...errors, email: validateEmail(formData.email) });
+    } else if (field === "password") {
+      setErrors({ ...errors, password: validatePassword(formData.password) });
+    }
+  };
+
+  const handleChange = (field: keyof typeof formData, value: string) => {
+    setFormData({ ...formData, [field]: value });
+
+    // Clear server error when user starts typing
+    if (error) setError("");
+
+    // Validate on change if field has been touched
+    if (touched[field]) {
+      if (field === "email") {
+        setErrors({ ...errors, email: validateEmail(value) });
+      } else if (field === "password") {
+        setErrors({ ...errors, password: validatePassword(value) });
+      }
+    }
+  };
+
+  const handleRememberMeChange = (checked: boolean) => {
+    setRememberMe(checked);
+
+    // If unchecking, remove saved email immediately
+    if (!checked) {
+      localStorage.removeItem("rememberedEmail");
+    }
+  };
 
   const handleSubmit = async () => {
     setError("");
+
+    if (!validateForm()) {
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+      // Call GraphQL login mutation
+      await authService.login({
+        email: formData.email.toLowerCase(),
+        password: formData.password,
       });
 
-      if (!response.ok) {
-        throw new Error("Invalid credentials");
+      // Save or remove email based on remember me checkbox
+      if (rememberMe) {
+        localStorage.setItem("rememberedEmail", formData.email);
+      } else {
+        localStorage.removeItem("rememberedEmail");
       }
 
+      // Redirect to home page
       router.push("/");
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -41,11 +158,13 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      // In production: window.location.href = "/api/auth/google";
-    }, 1000);
+    authService.googleLogin();
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !loading) {
+      handleSubmit();
+    }
   };
 
   return (
@@ -108,12 +227,21 @@ export default function LoginPage() {
                   type="email"
                   required
                   value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                  className="flex h-11 sm:h-12 w-full rounded-lg border border-zinc-200 bg-white px-3 sm:px-4 text-sm text-zinc-900 transition-colors placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-600 dark:focus:border-blue-600 dark:focus:ring-blue-600/20"
+                  onChange={(e) => handleChange("email", e.target.value)}
+                  onBlur={() => handleBlur("email")}
+                  onKeyPress={handleKeyPress}
+                  className={`flex h-11 sm:h-12 w-full rounded-lg border ${
+                    touched.email && errors.email
+                      ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                      : "border-zinc-200 focus:border-blue-500 focus:ring-blue-500/20"
+                  } bg-white px-3 sm:px-4 text-sm text-zinc-900 transition-colors placeholder:text-zinc-400 focus:outline-none focus:ring-2 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-600`}
                   placeholder="you@example.com"
                 />
+                {touched.email && errors.email && (
+                  <p className="text-xs text-red-600 dark:text-red-400">
+                    {errors.email}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -128,12 +256,21 @@ export default function LoginPage() {
                   type="password"
                   required
                   value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                  className="flex h-11 sm:h-12 w-full rounded-lg border border-zinc-200 bg-white px-3 sm:px-4 text-sm text-zinc-900 transition-colors placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-600 dark:focus:border-blue-600 dark:focus:ring-blue-600/20"
+                  onChange={(e) => handleChange("password", e.target.value)}
+                  onBlur={() => handleBlur("password")}
+                  onKeyPress={handleKeyPress}
+                  className={`flex h-11 sm:h-12 w-full rounded-lg border ${
+                    touched.password && errors.password
+                      ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                      : "border-zinc-200 focus:border-blue-500 focus:ring-blue-500/20"
+                  } bg-white px-3 sm:px-4 text-sm text-zinc-900 transition-colors placeholder:text-zinc-400 focus:outline-none focus:ring-2 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-600`}
                   placeholder="••••••••"
                 />
+                {touched.password && errors.password && (
+                  <p className="text-xs text-red-600 dark:text-red-400">
+                    {errors.password}
+                  </p>
+                )}
               </div>
 
               {/* Remember Me & Forgot Password */}
@@ -142,6 +279,8 @@ export default function LoginPage() {
                   <input
                     id="remember-me"
                     type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => handleRememberMeChange(e.target.checked)}
                     className="h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-800 dark:ring-offset-zinc-900"
                   />
                   <label

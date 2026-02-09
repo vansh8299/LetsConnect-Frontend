@@ -4,7 +4,6 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Menu, X, MessageSquare } from "lucide-react";
-import { ThemeToggle } from "./ThemeToggle";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -23,7 +22,6 @@ export default function Header() {
 
           {/* Desktop Navigation */}
           <div className="hidden items-center space-x-3 md:flex">
-            <ThemeToggle />
             <Link
               href="/login"
               className="rounded-lg px-3 py-2 sm:px-4 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
@@ -40,7 +38,6 @@ export default function Header() {
 
           {/* Mobile Right Section */}
           <div className="flex items-center space-x-2 md:hidden">
-            <ThemeToggle />
             <button
               className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
