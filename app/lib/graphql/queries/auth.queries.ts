@@ -1,4 +1,4 @@
-// lib/graphql/queries/auth.ts
+// lib/graphql/queries/auth.queries.ts
 import { gql } from "@apollo/client";
 
 export const ME_QUERY = gql`
@@ -7,6 +7,10 @@ export const ME_QUERY = gql`
       id
       email
       name
+      about
+      profilePicture
+      googleId
+      status
       createdAt
       updatedAt
     }

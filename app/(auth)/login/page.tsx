@@ -1,12 +1,13 @@
 // app/login/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Header from "@/app/components/ui/Header";
 import { Chrome } from "lucide-react";
 import { authService } from "@/app/lib/services/auth.service";
+import { useLogin } from "@/app/lib/hooks";
 
 interface ValidationErrors {
   email?: string;
@@ -15,7 +16,8 @@ interface ValidationErrors {
 
 export default function LoginPage() {
   const router = useRouter();
-   const searchParams = useSearchParams();
+  const { login, loading: loginLoading, error: loginError } = useLogin();
+  const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -28,7 +30,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-useEffect(() => {
+  useEffect(() => {
     const authStatus = searchParams.get("auth");
     const error = searchParams.get("error");
 
@@ -44,8 +46,6 @@ useEffect(() => {
       setError(errorMessages[error] || "Authentication failed");
     }
   }, [searchParams, router]);
-
-  
 
   // Load saved email on component mount
   useEffect(() => {
@@ -135,7 +135,7 @@ useEffect(() => {
 
     try {
       // Call GraphQL login mutation
-      await authService.login({
+      await login({
         email: formData.email.toLowerCase(),
         password: formData.password,
       });

@@ -72,7 +72,7 @@ const ChatArea = ({
         <div className="flex items-center gap-3">
           <div className="relative">
             <img
-              src={selectedChat.user.avatar}
+              src={selectedChat.user.profilePicture}
               alt={selectedChat.user.name}
               className="h-11 w-11 rounded-full object-cover"
             />
@@ -80,7 +80,7 @@ const ChatArea = ({
               className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white dark:border-slate-900 ${
                 selectedChat.user.status === "online"
                   ? "bg-green-500"
-                  : selectedChat.user.status === "away"
+                  : selectedChat.user.status === "offline"
                     ? "bg-yellow-500"
                     : "bg-slate-400"
               }`}
@@ -95,7 +95,7 @@ const ChatArea = ({
                 ? "Active now"
                 : selectedChat.user.status === "away"
                   ? "Away"
-                  : selectedChat.user.lastSeen || "Offline"}
+                  : "Offline"}
             </p>
           </div>
         </div>

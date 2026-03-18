@@ -2,15 +2,17 @@
 
 import { MessageSquare, Radio, Users, User } from "lucide-react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface IconSidebarProps {
   currentUser: {
     name: string;
-    avatar: string;
+    profilePicture: string;
   };
 }
 
 const IconSidebar = ({ currentUser }: IconSidebarProps) => {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<
     "chats" | "status" | "users" | "profile"
   >("chats");
@@ -20,6 +22,11 @@ const IconSidebar = ({ currentUser }: IconSidebarProps) => {
     { id: "status" as const, icon: Radio, label: "Status" },
     { id: "users" as const, icon: Users, label: "All Users" },
   ];
+
+  const handleProfileClick = () => {
+    setActiveTab("profile");
+    router.push("/profile");
+  };
 
   return (
     <div className="flex h-screen w-16 flex-col items-center justify-between border-r border-slate-200 bg-gradient-to-b from-indigo-600 to-purple-700 py-6 dark:border-slate-800 dark:from-indigo-900 dark:to-purple-900">
@@ -53,7 +60,7 @@ const IconSidebar = ({ currentUser }: IconSidebarProps) => {
 
       {/* Bottom Profile */}
       <button
-        onClick={() => setActiveTab("profile")}
+        onClick={handleProfileClick}
         className={`group relative flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-200 ${
           activeTab === "profile"
             ? "ring-2 ring-white ring-offset-2 ring-offset-indigo-600 dark:ring-offset-indigo-900"
@@ -62,7 +69,7 @@ const IconSidebar = ({ currentUser }: IconSidebarProps) => {
         title="Profile"
       >
         <img
-          src={currentUser.avatar}
+          src={currentUser.profilePicture}
           alt={currentUser.name}
           className="h-10 w-10 rounded-xl object-cover"
         />

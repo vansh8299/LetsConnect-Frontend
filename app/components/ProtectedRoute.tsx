@@ -3,18 +3,24 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "@/app/context/AuthContext";
 
+/**
+ * ProtectedRoute Component
+ * Wraps pages/components that require authentication
+ * Redirects to login if user is not authenticated
+ */
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, loading } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
+    if (!loading && !user) {
       router.push("/login");
     }
-  }, [isAuthenticated, loading, router]);
+  }, [user, loading, router]);
 
+  // Show loading spinner while checking authentication
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -23,7 +29,8 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!isAuthenticated) {
+  // Don't render children if not authenticated
+  if (!user) {
     return null;
   }
 

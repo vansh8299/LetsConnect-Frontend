@@ -1,13 +1,19 @@
 // lib/graphql/client.ts
-import { ApolloClient, InMemoryCache, createHttpLink } from "@apollo/client";
-import { setContext } from "@apollo/client/link/context";
+/**
+ * Apollo Client Configuration
+ * Handles GraphQL requests with cookie-based authentication
+ * Automatically includes cookies in requests
+ */
 
-// Function to get GraphQL URI
-const getGraphQLUri = () => {
+import { ApolloClient, InMemoryCache, createHttpLink } from "@apollo/client";
+
+/**
+ * Get GraphQL endpoint URI
+ */
+const getGraphQLUri = (): string => {
   const uri =
     process.env.NEXT_PUBLIC_GRAPHQL_URL || "http://localhost:4001/graphql";
 
-  // Log the URI for debugging (only in browser)
   if (typeof window !== "undefined") {
     console.log("🔗 GraphQL URI:", uri);
   }
@@ -15,41 +21,31 @@ const getGraphQLUri = () => {
   return uri;
 };
 
-// Create HTTP Link
+/**
+ * HTTP Link - Makes the actual HTTP requests
+ * Includes credentials (cookies) automatically
+ */
 const httpLink = createHttpLink({
   uri: getGraphQLUri(),
-  credentials: "include", // Important for cookies
+  credentials: "include", // Include cookies in all requests
   fetchOptions: {
     mode: "cors",
   },
 });
 
-// Auth Link - adds authorization header with token
-const authLink = setContext((_, { headers }) => {
-  // Get token from localStorage (only in browser)
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-
-  if (token && typeof window !== "undefined") {
-    console.log("🔑 Adding auth token to request");
-  }
-
-  return {
-    headers: {
-      ...headers,
-      ...(token ? { authorization: `Bearer ${token}` } : {}),
-    },
-  };
-});
-
-// Create Apollo Client
+/**
+ * Apollo Client Instance
+ * Uses cookie-based authentication via credentials: "include"
+ * Uses in-memory cache for caching
+ */
 export const apolloClient = new ApolloClient({
-  link: authLink.concat(httpLink),
+  ssrMode: typeof window === "undefined", // Use SSR mode on server
+  link: httpLink,
   cache: new InMemoryCache(),
   defaultOptions: {
     watchQuery: {
-      fetchPolicy: "network-only",
-      errorPolicy: "all",
+      fetchPolicy: "network-only", // Always fetch from network
+      errorPolicy: "all", // Return all errors
     },
     query: {
       fetchPolicy: "network-only",
@@ -61,7 +57,10 @@ export const apolloClient = new ApolloClient({
   },
 });
 
-// Helper function to test connection
+/**
+ * Test GraphQL Connection
+ * Useful for debugging connection issues
+ */
 export const testGraphQLConnection = async (): Promise<boolean> => {
   if (typeof window === "undefined") return false;
 
@@ -87,26 +86,29 @@ export const testGraphQLConnection = async (): Promise<boolean> => {
       return false;
     }
   } catch (error) {
-    console.error("❌ GraphQL connection failed:");
+    console.error("❌ GraphQL connection error:");
     console.error(error);
-    console.error("\n🔴 Checklist:");
+    console.error("\n📋 Troubleshooting Checklist:");
     console.error(
-      "1. Is backend running? Run: npm run dev (in backend folder)",
+      "1. ✓ Is backend running? Run: npm run dev (in backend folder)",
     );
-    console.error("2. Is it on port 4001? Check backend terminal output");
+    console.error("2. ✓ Is it on port 4001? Check backend terminal output");
+    console.error("3. ✓ Can you access http://localhost:4001/graphql?");
     console.error(
-      "3. Can you access http://localhost:4001/graphql in browser?",
+      "4. ✓ Did you create .env.local with NEXT_PUBLIC_GRAPHQL_URL?",
     );
-    console.error("4. Did you create .env.local with NEXT_PUBLIC_GRAPHQL_URL?");
-    console.error("5. Did you restart Next.js after creating .env.local?");
+    console.error("5. ✓ Did you restart Next.js after creating .env.local?");
+    console.error("6. ✓ Check CORS settings on backend");
     return false;
   }
 };
 
-// Auto-test connection when in browser (for debugging)
+/**
+ * Auto-test connection on client-side (for debugging)
+ * Runs once after component mount
+ */
 if (typeof window !== "undefined") {
-  // Test connection after a short delay
   setTimeout(() => {
     testGraphQLConnection();
-  }, 1000);
+  }, 1500);
 }

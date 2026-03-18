@@ -1,12 +1,27 @@
+// app/page.tsx
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { checkAuthStatus } from "@/app/lib/utils/auth.utils";
 
 export default function Home() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    checkAuthStatus().then((auth) => {
+      setIsAuthenticated(auth);
+      setMounted(true);
+    });
+  }, []);
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-zinc-50 to-zinc-100 px-4 dark:from-zinc-900 dark:to-zinc-950">
       <main className="w-full max-w-4xl space-y-12 text-center">
         <div className="space-y-6">
           <h1 className="text-5xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-6xl md:text-7xl">
-            Welcome to Your App
+            Welcome to Let's Connect
           </h1>
           <p className="mx-auto max-w-2xl text-lg text-zinc-600 dark:text-zinc-400 sm:text-xl">
             Get started by signing in to your account or creating a new one.
@@ -15,19 +30,36 @@ export default function Home() {
           </p>
         </div>
 
+        {/* CTA Buttons */}
         <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-          <Link
-            href="/login"
-            className="w-full rounded-lg bg-zinc-900 px-8 py-4 text-base font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 sm:w-auto"
-          >
-            Sign In
-          </Link>
-          <Link
-            href="/signup"
-            className="w-full rounded-lg border border-zinc-300 bg-white px-8 py-4 text-base font-medium text-zinc-900 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:bg-zinc-800 sm:w-auto"
-          >
-            Create Account
-          </Link>
+          {!mounted ? (
+            <>
+              <div className="h-14 w-full rounded-lg bg-zinc-200 animate-pulse dark:bg-zinc-800 sm:w-36" />
+              <div className="h-14 w-full rounded-lg bg-zinc-200 animate-pulse dark:bg-zinc-800 sm:w-40" />
+            </>
+          ) : isAuthenticated ? (
+            <Link
+              href="/chats"
+              className="w-full rounded-lg bg-blue-600 px-8 py-4 text-base font-medium text-white transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 sm:w-auto"
+            >
+              Go to Dashboard →
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="w-full rounded-lg bg-zinc-900 px-8 py-4 text-base font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 sm:w-auto"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/signup"
+                className="w-full rounded-lg border border-zinc-300 bg-white px-8 py-4 text-base font-medium text-zinc-900 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:bg-zinc-800 sm:w-auto"
+              >
+                Create Account
+              </Link>
+            </>
+          )}
         </div>
 
         <div className="mt-16 grid gap-8 sm:grid-cols-3">

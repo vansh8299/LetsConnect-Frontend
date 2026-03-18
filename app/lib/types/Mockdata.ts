@@ -1,4 +1,4 @@
-import { Chat, User } from "./auth";
+import { Chat, User } from "./auth.types";
 
 const createUser = (
   id: string,
@@ -10,9 +10,8 @@ const createUser = (
   id,
   name,
   email: `${name.toLowerCase().replace(/\s+/g, ".")}@example.com`,
-  avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`,
+  profilePicture: `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`,
   status,
-  lastSeen,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 });

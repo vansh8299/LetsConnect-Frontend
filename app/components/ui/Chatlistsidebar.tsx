@@ -85,7 +85,7 @@ const ChatListSidebar = ({
                   {/* Avatar with Status */}
                   <div className="relative flex-shrink-0">
                     <img
-                      src={chat.user.avatar}
+                      src={chat.user.profilePicture}
                       alt={chat.user.name}
                       className="h-12 w-12 rounded-full object-cover"
                     />
@@ -93,7 +93,7 @@ const ChatListSidebar = ({
                       className={`absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-white dark:border-slate-900 ${
                         chat.user.status === "online"
                           ? "bg-green-500"
-                          : chat.user.status === "away"
+                          : chat.user.status === "offline"
                             ? "bg-yellow-500"
                             : "bg-slate-400"
                       }`}

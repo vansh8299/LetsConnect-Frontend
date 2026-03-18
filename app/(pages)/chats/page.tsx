@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { mockChats, currentUser } from "@/app/lib/types/Mockdata";
-import { Message } from "@/app/lib/types/auth";
+import { Message } from "@/app/lib/types/auth.types";
 
 // Dynamic imports for better code splitting
 const IconSidebar = dynamic(() => import("@/app/components/ui/IconSidebar"), {
@@ -95,7 +95,12 @@ export default function ChatsPage() {
     <div className="flex h-screen overflow-hidden bg-white dark:bg-slate-950">
       {/* Left Icon Sidebar - 10% */}
       <div className="flex-shrink-0">
-        <IconSidebar currentUser={currentUser} />
+        <IconSidebar
+          currentUser={{
+            name: currentUser.name || "User",
+            profilePicture: currentUser.profilePicture || "",
+          }}
+        />
       </div>
 
       {/* Chat List Sidebar - 30% */}
