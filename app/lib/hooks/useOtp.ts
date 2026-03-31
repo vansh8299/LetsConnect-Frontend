@@ -1,14 +1,16 @@
-// lib/hooks/useOtp.ts
 "use client";
+
 import { useMutation } from "@apollo/client/react";
 import {
   SEND_OTP_MUTATION,
   VERIFY_OTP_MUTATION,
 } from "../graphql/mutations/otp.mutations";
 
+type OtpResponse = { success: boolean; message: string };
+
 export const useSendOtp = () => {
   const [sendOtpMutation, { loading, error }] = useMutation<{
-    sendOtp: { success: boolean; message: string };
+    sendOtp: OtpResponse;
   }>(SEND_OTP_MUTATION);
 
   return {
@@ -23,7 +25,7 @@ export const useSendOtp = () => {
 
 export const useVerifyOtp = () => {
   const [verifyOtpMutation, { loading, error }] = useMutation<{
-    verifyOtp: { success: boolean; message: string };
+    verifyOtp: OtpResponse;
   }>(VERIFY_OTP_MUTATION);
 
   return {

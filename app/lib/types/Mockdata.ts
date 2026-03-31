@@ -1,17 +1,19 @@
+// lib/mockData.ts
 import { Chat, User } from "./auth.types";
 
 const createUser = (
   id: string,
   name: string,
   seed: string,
-  status: "online" | "offline" | "away",
+  isOnline: boolean,
   lastSeen?: string,
 ): User => ({
   id,
   name,
   email: `${name.toLowerCase().replace(/\s+/g, ".")}@example.com`,
   profilePicture: `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`,
-  status,
+  isOnline,
+  lastSeen: lastSeen ?? null,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 });
@@ -20,13 +22,13 @@ export const currentUser: User = createUser(
   "current-user",
   "You",
   "current",
-  "online",
+  true,
 );
 
 export const mockChats: Chat[] = [
   {
     id: "1",
-    user: createUser("user-1", "Sarah Johnson", "Sarah", "online"),
+    user: createUser("user-1", "Sarah Johnson", "Sarah", true),
     lastMessage: "Hey! How are you doing?",
     lastMessageTime: "2:30 PM",
     unreadCount: 2,
@@ -64,7 +66,13 @@ export const mockChats: Chat[] = [
   },
   {
     id: "2",
-    user: createUser("user-2", "Michael Chen", "Michael", "away"),
+    user: createUser(
+      "user-2",
+      "Michael Chen",
+      "Michael",
+      false,
+      new Date(Date.now() - 3 * 60 * 1000).toISOString(), // 3 mins ago = away
+    ),
     lastMessage: "Can you send me the report?",
     lastMessageTime: "1:15 PM",
     unreadCount: 0,
@@ -91,8 +99,8 @@ export const mockChats: Chat[] = [
       "user-3",
       "Emily Rodriguez",
       "Emily",
-      "offline",
-      "Last seen today at 11:20 AM",
+      false,
+      new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(), // 3 hours ago
     ),
     lastMessage: "Thanks for your help!",
     lastMessageTime: "11:20 AM",
@@ -116,7 +124,7 @@ export const mockChats: Chat[] = [
   },
   {
     id: "4",
-    user: createUser("user-4", "David Kim", "David", "online"),
+    user: createUser("user-4", "David Kim", "David", true),
     lastMessage: "Let's catch up soon!",
     lastMessageTime: "Yesterday",
     unreadCount: 1,
@@ -132,7 +140,7 @@ export const mockChats: Chat[] = [
   },
   {
     id: "5",
-    user: createUser("user-5", "Jessica Taylor", "Jessica", "online"),
+    user: createUser("user-5", "Jessica Taylor", "Jessica", true),
     lastMessage: "Perfect! See you then.",
     lastMessageTime: "Yesterday",
     unreadCount: 0,
@@ -155,7 +163,13 @@ export const mockChats: Chat[] = [
   },
   {
     id: "6",
-    user: createUser("user-6", "Alex Martinez", "Alex", "away"),
+    user: createUser(
+      "user-6",
+      "Alex Martinez",
+      "Alex",
+      false,
+      new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+    ),
     lastMessage: "Got it, thanks!",
     lastMessageTime: "2 days ago",
     unreadCount: 0,
@@ -174,6 +188,6 @@ export const mockChats: Chat[] = [
 export const allUsers: User[] = [
   currentUser,
   ...mockChats.map((chat) => chat.user),
-  createUser("user-7", "Rachel Green", "Rachel", "offline"),
-  createUser("user-8", "Tom Wilson", "Tom", "online"),
+  createUser("user-7", "Rachel Green", "Rachel", false),
+  createUser("user-8", "Tom Wilson", "Tom", true),
 ];

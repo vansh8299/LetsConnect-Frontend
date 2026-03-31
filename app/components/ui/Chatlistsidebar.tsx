@@ -1,8 +1,9 @@
+// app/components/ui/ChatListSidebar.tsx
 "use client";
 
 import { Search, X } from "lucide-react";
 import { useState } from "react";
-import { Chat } from "@/app/lib/types/auth";
+import { Chat } from "@/app/lib/types/auth.types";
 
 interface ChatListSidebarProps {
   chats: Chat[];
@@ -20,6 +21,27 @@ const ChatListSidebar = ({
   const filteredChats = chats.filter((chat) =>
     chat.user.name?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
+
+  const getStatusColor = (isOnline: boolean, lastSeen: string | null) => {
+    if (isOnline) return "bg-green-500";
+    if (!lastSeen) return "bg-slate-400";
+    // Recently seen within 5 minutes = away
+    const diff = Date.now() - new Date(lastSeen).getTime();
+    return diff < 5 * 60 * 1000 ? "bg-yellow-500" : "bg-slate-400";
+  };
+
+  const formatLastSeen = (lastSeen: string | null) => {
+    if (!lastSeen) return "";
+    const date = new Date(lastSeen);
+    if (isNaN(date.getTime())) return "";
+    const diff = Date.now() - date.getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "Just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  };
 
   return (
     <div className="flex h-screen w-full flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
@@ -84,27 +106,27 @@ const ChatListSidebar = ({
                 >
                   {/* Avatar with Status */}
                   <div className="relative flex-shrink-0">
-                    <img
-                      src={chat.user.profilePicture}
-                      alt={chat.user.name}
-                      className="h-12 w-12 rounded-full object-cover"
-                    />
+                    {chat.user.profilePicture ? (
+                      <img
+                        src={chat.user.profilePicture}
+                        alt={chat.user.name ?? "User"}
+                        className="h-12 w-12 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-12 w-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold">
+                        {chat.user.name?.charAt(0).toUpperCase() ?? "?"}
+                      </div>
+                    )}
                     <span
-                      className={`absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-white dark:border-slate-900 ${
-                        chat.user.status === "online"
-                          ? "bg-green-500"
-                          : chat.user.status === "offline"
-                            ? "bg-yellow-500"
-                            : "bg-slate-400"
-                      }`}
-                    ></span>
+                      className={`absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-white dark:border-slate-900 ${getStatusColor(chat.user.isOnline, chat.user.lastSeen)}`}
+                    />
                   </div>
 
                   {/* Chat Info */}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2">
                       <h3 className="truncate font-semibold text-slate-900 dark:text-white">
-                        {chat.user.name}
+                        {chat.user.name ?? "Unnamed User"}
                       </h3>
                       <span className="flex-shrink-0 text-xs text-slate-500 dark:text-slate-400">
                         {chat.lastMessageTime}
@@ -120,6 +142,12 @@ const ChatListSidebar = ({
                         </span>
                       )}
                     </div>
+                    {/* Last seen for offline users */}
+                    {!chat.user.isOnline && chat.user.lastSeen && (
+                      <p className="mt-0.5 text-xs text-slate-400">
+                        {formatLastSeen(chat.user.lastSeen)}
+                      </p>
+                    )}
                   </div>
                 </button>
               );

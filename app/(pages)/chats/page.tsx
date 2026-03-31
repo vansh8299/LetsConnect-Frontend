@@ -1,17 +1,24 @@
+// app/(pages)/chats/page.tsx
 "use client";
 
 import { useState, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { mockChats, currentUser } from "@/app/lib/types/Mockdata";
 import { Message } from "@/app/lib/types/auth.types";
+import AllUsersPanel from "@/app/components/ui/AllUsersPanel";
+import FriendRequestsPanel from "@/app/components/ui/FriendRequestsPanel";
+import {
+  useGetAllUsers,
+  useFriendRequests,
+  useOnlineStatus,
+  useUserStatusSubscription,
+} from "@/app/lib/hooks";
 
-// Dynamic imports for better code splitting
 const IconSidebar = dynamic(() => import("@/app/components/ui/IconSidebar"), {
   loading: () => (
     <div className="w-16 animate-pulse bg-slate-200 dark:bg-slate-800" />
   ),
 });
-
 const ChatListSidebar = dynamic(
   () => import("@/app/components/ui/Chatlistsidebar"),
   {
@@ -20,25 +27,33 @@ const ChatListSidebar = dynamic(
     ),
   },
 );
-
 const ChatArea = dynamic(() => import("@/app/components/ui/ChatArea"), {
   loading: () => (
     <div className="flex-1 animate-pulse bg-slate-50 dark:bg-slate-950" />
   ),
 });
 
+type SidebarView = "chats" | "users" | "requests";
+
 export default function ChatsPage() {
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const [chats, setChats] = useState(mockChats);
+  const [sidebarView, setSidebarView] = useState<SidebarView>("chats");
+
+  const { users } = useGetAllUsers();
+  const { friendRequests, loading: requestsLoading } = useFriendRequests();
+
+  // Set own online status + subscribe to others' status changes
+  useOnlineStatus();
+  useUserStatusSubscription();
 
   const selectedChat = useMemo(
-    () => chats.find((chat) => chat.id === activeChat),
+    () => chats.find((c) => c.id === activeChat),
     [activeChat, chats],
   );
 
   const handleSendMessage = (content: string) => {
     if (!activeChat) return;
-
     const newMessage: Message = {
       id: `m${Date.now()}`,
       senderId: currentUser.id,
@@ -49,9 +64,8 @@ export default function ChatsPage() {
       }),
       status: "sent",
     };
-
-    setChats((prevChats) =>
-      prevChats.map((chat) =>
+    setChats((prev) =>
+      prev.map((chat) =>
         chat.id === activeChat
           ? {
               ...chat,
@@ -62,11 +76,9 @@ export default function ChatsPage() {
           : chat,
       ),
     );
-
-    // Simulate message status updates
     setTimeout(() => {
-      setChats((prevChats) =>
-        prevChats.map((chat) => ({
+      setChats((prev) =>
+        prev.map((chat) => ({
           ...chat,
           messages: chat.messages.map((msg: any) =>
             msg.id === newMessage.id
@@ -76,10 +88,9 @@ export default function ChatsPage() {
         })),
       );
     }, 1000);
-
     setTimeout(() => {
-      setChats((prevChats) =>
-        prevChats.map((chat) => ({
+      setChats((prev) =>
+        prev.map((chat) => ({
           ...chat,
           messages: chat.messages.map((msg: any) =>
             msg.id === newMessage.id
@@ -93,32 +104,49 @@ export default function ChatsPage() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-white dark:bg-slate-950">
-      {/* Left Icon Sidebar - 10% */}
       <div className="flex-shrink-0">
         <IconSidebar
           currentUser={{
             name: currentUser.name || "User",
             profilePicture: currentUser.profilePicture || "",
           }}
+          pendingRequestCount={friendRequests.length}
+          onTabChange={(tab) => setSidebarView(tab as SidebarView)}
         />
       </div>
 
-      {/* Chat List Sidebar - 30% */}
-      <div className="w-[30%] flex-shrink-0">
-        <ChatListSidebar
-          chats={chats}
-          activeChat={activeChat}
-          onChatSelect={setActiveChat}
-        />
-      </div>
+      {sidebarView === "chats" && (
+        <div className="w-[30%] flex-shrink-0">
+          <ChatListSidebar
+            chats={chats}
+            activeChat={activeChat}
+            onChatSelect={setActiveChat}
+          />
+        </div>
+      )}
 
-      {/* Main Chat Area - Remaining space */}
-      <div className="flex flex-1 flex-col">
-        <ChatArea
-          selectedChat={selectedChat}
-          currentUserId={currentUser.id}
-          onSendMessage={handleSendMessage}
-        />
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {sidebarView === "users" ? (
+          <AllUsersPanel
+            users={users}
+            currentUserId={currentUser.id}
+            onStartChat={(id) => {
+              setSidebarView("chats");
+              setActiveChat(id);
+            }}
+          />
+        ) : sidebarView === "requests" ? (
+          <FriendRequestsPanel
+            requests={friendRequests}
+            loading={requestsLoading}
+          />
+        ) : (
+          <ChatArea
+            selectedChat={selectedChat}
+            currentUserId={currentUser.id}
+            onSendMessage={handleSendMessage}
+          />
+        )}
       </div>
     </div>
   );

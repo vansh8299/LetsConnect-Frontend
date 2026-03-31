@@ -68,23 +68,11 @@ export const REFRESH_TOKEN_MUTATION = gql`
 `;
 
 export const UPDATE_PROFILE_MUTATION = gql`
-  mutation UpdateProfile(
-    $firstName: String
-    $lastName: String
-    $about: String
-    $profilePicture: String
-  ) {
-    updateProfile(
-      firstName: $firstName
-      lastName: $lastName
-      about: $about
-      profilePicture: $profilePicture
-    ) {
+  mutation UpdateProfile($about: String, $profilePicture: String) {
+    updateProfile(about: $about, profilePicture: $profilePicture) {
       id
       email
       name
-      firstName
-      lastName
       about
       profilePicture
       createdAt

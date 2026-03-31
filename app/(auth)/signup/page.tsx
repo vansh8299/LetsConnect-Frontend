@@ -1,4 +1,3 @@
-// app/signup/page.tsx
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -7,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Header from "@/app/components/ui/Header";
 import { Chrome, Mail, RefreshCw, Camera, X, Upload } from "lucide-react";
+import { toast } from "sonner";
 import { authService } from "@/app/lib/services/auth.service";
 import { useSignup } from "@/app/lib/hooks";
 import { useSendOtp, useVerifyOtp } from "@/app/lib/hooks/useOtp";
@@ -39,11 +39,9 @@ export default function SignupPage() {
   const { uploadProfilePicture, loading: uploadLoading } =
     useUploadProfilePicture();
 
-  // Step management
   const [step, setStep] = useState<Step>("form");
   const [loadingStage, setLoadingStage] = useState<LoadingStage>("idle");
 
-  // Form state
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -58,21 +56,16 @@ export default function SignupPage() {
     confirmPassword: false,
   });
 
-  // Profile picture state
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarError, setAvatarError] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // OTP state
   const [otpValues, setOtpValues] = useState(["", "", "", "", "", ""]);
-  const [otpError, setOtpError] = useState("");
   const [resendTimer, setResendTimer] = useState(0);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [otpHasError, setOtpHasError] = useState(false);
 
-  // General
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -84,15 +77,14 @@ export default function SignupPage() {
     return () => clearInterval(interval);
   }, [resendTimer]);
 
-  // ─── Avatar Handling ─────────────────────────────────────────────────────────
+  // ─── Avatar ──────────────────────────────────────────────────────────────────
   const processImageFile = useCallback((file: File) => {
-    setAvatarError("");
     if (!ACCEPTED_TYPES.includes(file.type)) {
-      setAvatarError("Please upload a JPEG, PNG, WebP, or GIF image.");
+      toast.error("Please upload a JPEG, PNG, WebP, or GIF image.");
       return;
     }
     if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      setAvatarError(`Image must be smaller than ${MAX_FILE_SIZE_MB}MB.`);
+      toast.error(`Image must be smaller than ${MAX_FILE_SIZE_MB}MB.`);
       return;
     }
     setAvatarFile(file);
@@ -125,7 +117,6 @@ export default function SignupPage() {
   const removeAvatar = () => {
     setAvatarPreview(null);
     setAvatarFile(null);
-    setAvatarError("");
   };
 
   // ─── Validation ──────────────────────────────────────────────────────────────
@@ -192,7 +183,6 @@ export default function SignupPage() {
 
   const handleChange = (field: keyof typeof formData, value: string) => {
     setFormData({ ...formData, [field]: value });
-    if (error) setError("");
     if (!touched[field]) return;
     const validators = {
       name: validateName,
@@ -215,24 +205,24 @@ export default function SignupPage() {
 
   // ─── Send OTP ────────────────────────────────────────────────────────────────
   const handleSendOtp = async () => {
-    setError("");
     if (!validateForm()) return;
     setLoading(true);
     try {
       await sendOtp(formData.email.toLowerCase(), formData.name.trim());
       setStep("otp");
       setResendTimer(OTP_RESEND_SECONDS);
+      toast.success("OTP sent! Check your inbox.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to send OTP");
+      toast.error(err instanceof Error ? err.message : "Failed to send OTP.");
     } finally {
       setLoading(false);
     }
   };
 
-  // ─── OTP Handling ────────────────────────────────────────────────────────────
+  // ─── OTP Input ───────────────────────────────────────────────────────────────
   const handleOtpChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return;
-    setOtpError("");
+    setOtpHasError(false);
     if (value.length > 1) {
       const digits = value.replace(/\D/g, "").slice(0, 6);
       const newOtp = [...otpValues];
@@ -261,17 +251,15 @@ export default function SignupPage() {
   const handleVerifyOtp = async () => {
     const otp = otpValues.join("");
     if (otp.length < 6) {
-      setOtpError("Please enter the complete 6-digit OTP");
+      setOtpHasError(true);
+      toast.error("Please enter the complete 6-digit OTP.");
       return;
     }
-    setOtpError("");
     setLoading(true);
     try {
-      // 1. Verify OTP
       setLoadingStage("verifying");
       await verifyOtp(formData.email.toLowerCase(), otp);
 
-      // 2. Upload profile picture if provided
       let profilePictureUrl: string | undefined;
       if (avatarPreview && avatarFile) {
         setLoadingStage("uploading");
@@ -282,7 +270,6 @@ export default function SignupPage() {
         profilePictureUrl = uploadResult?.url;
       }
 
-      // 3. Create account
       setLoadingStage("creating");
       await signup({
         name: formData.name.trim(),
@@ -291,10 +278,12 @@ export default function SignupPage() {
         profilePicture: profilePictureUrl,
       });
 
+      toast.success("Account created! Welcome aboard 🎉");
       router.push("/chats");
       router.refresh();
     } catch (err) {
-      setOtpError(err instanceof Error ? err.message : "Verification failed");
+      setOtpHasError(true);
+      toast.error(err instanceof Error ? err.message : "Verification failed.");
       setOtpValues(["", "", "", "", "", ""]);
       otpRefs.current[0]?.focus();
     } finally {
@@ -306,16 +295,17 @@ export default function SignupPage() {
   // ─── Resend OTP ───────────────────────────────────────────────────────────────
   const handleResendOtp = async () => {
     if (resendTimer > 0) return;
-    setOtpError("");
     setOtpValues(["", "", "", "", "", ""]);
+    setOtpHasError(false);
     setLoading(true);
     setLoadingStage("resending");
     try {
       await sendOtp(formData.email.toLowerCase(), formData.name.trim());
       setResendTimer(OTP_RESEND_SECONDS);
       otpRefs.current[0]?.focus();
+      toast.success("OTP resent!");
     } catch (err) {
-      setOtpError(err instanceof Error ? err.message : "Failed to resend OTP");
+      toast.error(err instanceof Error ? err.message : "Failed to resend OTP.");
     } finally {
       setLoading(false);
       setLoadingStage("idle");
@@ -336,12 +326,8 @@ export default function SignupPage() {
   };
 
   const passwordStrength = getPasswordStrength(formData.password);
-
-  // isLoading is true during any async operation
   const isLoading =
     loading || sendOtpLoading || verifyOtpLoading || uploadLoading;
-
-  // Only block verify button during verify/upload/create — not during resend
   const isVerifyLoading =
     loadingStage === "verifying" ||
     loadingStage === "uploading" ||
@@ -384,7 +370,6 @@ export default function SignupPage() {
             </div>
 
             <div className="space-y-6 rounded-xl bg-white p-6 sm:p-8 shadow-lg dark:bg-zinc-900">
-              {/* Avatar preview in OTP step */}
               {avatarPreview && (
                 <div className="flex items-center gap-3 rounded-lg bg-zinc-50 p-3 dark:bg-zinc-800">
                   <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-full ring-2 ring-blue-500">
@@ -396,7 +381,7 @@ export default function SignupPage() {
                     />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50 truncate">
+                    <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">
                       {formData.name}
                     </p>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -406,17 +391,11 @@ export default function SignupPage() {
                 </div>
               )}
 
-              {otpError && (
-                <div className="rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
-                  {otpError}
-                </div>
-              )}
-
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                   Enter 6-digit OTP
                 </label>
-                <div className="flex gap-2 sm:gap-3 justify-center">
+                <div className="flex justify-center gap-2 sm:gap-3">
                   {otpValues.map((val, i) => (
                     <input
                       key={i}
@@ -438,19 +417,19 @@ export default function SignupPage() {
                       }}
                       onFocus={(e) => e.target.select()}
                       disabled={isVerifyLoading}
-                      className={`h-12 w-12 sm:h-14 sm:w-14 rounded-lg border-2 text-center text-lg font-bold transition-all focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed
+                      className={`h-12 w-12 sm:h-14 sm:w-14 rounded-lg border-2 text-center text-lg font-bold transition-all focus:outline-none disabled:cursor-not-allowed disabled:opacity-50
                         ${
-                          otpError
+                          otpHasError
                             ? "border-red-500 bg-red-50 dark:bg-red-900/10"
                             : val
                               ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
                               : "border-zinc-200 focus:border-blue-500 dark:border-zinc-700"
                         }
-                        text-zinc-900 dark:text-zinc-50 dark:bg-zinc-950`}
+                        text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50`}
                     />
                   ))}
                 </div>
-                <p className="text-center text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                <p className="mt-1 text-center text-xs text-zinc-500 dark:text-zinc-400">
                   {loadingStage === "uploading"
                     ? "Uploading your profile picture..."
                     : loadingStage === "creating"
@@ -461,11 +440,10 @@ export default function SignupPage() {
                 </p>
               </div>
 
-              {/* Verify Button */}
               <button
                 onClick={handleVerifyOtp}
                 disabled={isVerifyLoading || otpValues.join("").length < 6}
-                className="w-full rounded-lg bg-blue-600 px-4 py-2.5 sm:py-3 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
+                className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600 sm:py-3"
               >
                 <span className="flex items-center justify-center gap-2">
                   {isVerifyLoading && (
@@ -494,7 +472,6 @@ export default function SignupPage() {
                 </span>
               </button>
 
-              {/* Resend OTP */}
               <div className="flex items-center justify-center gap-2 text-sm">
                 <span className="text-zinc-500 dark:text-zinc-400">
                   Didn't receive the code?
@@ -511,25 +488,22 @@ export default function SignupPage() {
                     className="flex items-center gap-1 font-medium text-blue-600 hover:underline disabled:opacity-50 dark:text-blue-400"
                   >
                     <RefreshCw
-                      className={`h-3.5 w-3.5 ${
-                        loadingStage === "resending" ? "animate-spin" : ""
-                      }`}
+                      className={`h-3.5 w-3.5 ${loadingStage === "resending" ? "animate-spin" : ""}`}
                     />
                     {loadingStage === "resending" ? "Sending..." : "Resend OTP"}
                   </button>
                 )}
               </div>
 
-              {/* Back */}
               <button
                 onClick={() => {
                   setStep("form");
                   setOtpValues(["", "", "", "", "", ""]);
-                  setOtpError("");
+                  setOtpHasError(false);
                   setLoadingStage("idle");
                 }}
                 disabled={isVerifyLoading}
-                className="w-full text-center text-sm text-zinc-500 hover:text-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed dark:text-zinc-400 dark:hover:text-zinc-200"
+                className="w-full text-center text-sm text-zinc-500 hover:text-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-zinc-400 dark:hover:text-zinc-200"
               >
                 ← Change email or details
               </button>
@@ -555,12 +529,11 @@ export default function SignupPage() {
             </p>
           </div>
 
-          <div className="space-y-5 sm:space-y-6 rounded-xl bg-white p-6 sm:p-8 shadow-lg dark:bg-zinc-900">
-            {/* Google */}
+          <div className="space-y-5 rounded-xl bg-white p-6 shadow-lg sm:space-y-6 sm:p-8 dark:bg-zinc-900">
             <button
               onClick={() => authService.googleLogin()}
               disabled={isLoading}
-              className="flex w-full items-center justify-center gap-3 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 sm:py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+              className="flex w-full items-center justify-center gap-3 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 sm:py-3"
             >
               <Chrome className="h-5 w-5" />
               <span>Continue with Google</span>
@@ -577,19 +550,12 @@ export default function SignupPage() {
               </div>
             </div>
 
-            {error && (
-              <div className="rounded-lg bg-red-50 p-3 sm:p-4 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
-                {error}
-              </div>
-            )}
-
-            {/* ── Profile Picture Upload ───────────────────────────────────── */}
+            {/* Profile Picture */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                 Profile Picture{" "}
-                <span className="text-zinc-400 font-normal">(optional)</span>
+                <span className="font-normal text-zinc-400">(optional)</span>
               </label>
-
               {!avatarPreview ? (
                 <div
                   onClick={() => fileInputRef.current?.click()}
@@ -612,7 +578,7 @@ export default function SignupPage() {
                         ? "Drop your photo here"
                         : "Click to upload or drag & drop"}
                     </p>
-                    <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
+                    <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
                       JPEG, PNG, WebP or GIF · Max {MAX_FILE_SIZE_MB}MB
                     </p>
                   </div>
@@ -631,36 +597,31 @@ export default function SignupPage() {
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="absolute -bottom-0.5 -right-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-white shadow-md hover:bg-blue-700 transition-colors"
-                      title="Change photo"
+                      className="absolute -bottom-0.5 -right-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-white shadow-md transition-colors hover:bg-blue-700"
                     >
                       <Camera className="h-3 w-3" />
                     </button>
                   </div>
-
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50 truncate">
+                    <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">
                       {avatarFile?.name}
                     </p>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
                       {avatarFile
                         ? (avatarFile.size / (1024 * 1024)).toFixed(2)
                         : ""}
                       MB · Ready to upload
                     </p>
                   </div>
-
                   <button
                     type="button"
                     onClick={removeAvatar}
-                    className="flex-shrink-0 rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-200 hover:text-zinc-600 transition-colors dark:hover:bg-zinc-700 dark:hover:text-zinc-300"
-                    title="Remove photo"
+                    className="flex-shrink-0 rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-200 hover:text-zinc-600 dark:hover:bg-zinc-700 dark:hover:text-zinc-300"
                   >
                     <X className="h-4 w-4" />
                   </button>
                 </div>
               )}
-
               <input
                 ref={fileInputRef}
                 type="file"
@@ -668,12 +629,6 @@ export default function SignupPage() {
                 onChange={handleFileChange}
                 className="hidden"
               />
-
-              {avatarError && (
-                <p className="text-xs text-red-600 dark:text-red-400">
-                  {avatarError}
-                </p>
-              )}
             </div>
 
             {/* Form Fields */}
@@ -751,7 +706,7 @@ export default function SignupPage() {
                     <span className="text-xs text-zinc-600 dark:text-zinc-400">
                       Password strength: {passwordStrength.label}
                     </span>
-                    <div className="h-1 w-full bg-zinc-200 rounded-full overflow-hidden dark:bg-zinc-800">
+                    <div className="h-1 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
                       <div
                         className={`h-full ${passwordStrength.color} transition-all duration-300`}
                         style={{ width: `${(passwordStrength.s / 6) * 100}%` }}
@@ -797,7 +752,7 @@ export default function SignupPage() {
             <button
               onClick={handleSendOtp}
               disabled={isLoading}
-              className="w-full rounded-lg bg-blue-600 px-4 py-2.5 sm:py-3 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
+              className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600 sm:py-3"
             >
               <span className="flex items-center justify-center gap-2">
                 {isLoading && (

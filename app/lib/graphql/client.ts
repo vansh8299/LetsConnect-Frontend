@@ -1,15 +1,6 @@
 // lib/graphql/client.ts
-/**
- * Apollo Client Configuration
- * Handles GraphQL requests with cookie-based authentication
- * Automatically includes cookies in requests
- */
-
 import { ApolloClient, InMemoryCache, createHttpLink } from "@apollo/client";
 
-/**
- * Get GraphQL endpoint URI
- */
 const getGraphQLUri = (): string => {
   const uri =
     process.env.NEXT_PUBLIC_GRAPHQL_URL || "http://localhost:4001/graphql";
@@ -21,46 +12,35 @@ const getGraphQLUri = (): string => {
   return uri;
 };
 
-/**
- * HTTP Link - Makes the actual HTTP requests
- * Includes credentials (cookies) automatically
- */
 const httpLink = createHttpLink({
   uri: getGraphQLUri(),
-  credentials: "include", // Include cookies in all requests
+  credentials: "include",
   fetchOptions: {
     mode: "cors",
   },
 });
 
-/**
- * Apollo Client Instance
- * Uses cookie-based authentication via credentials: "include"
- * Uses in-memory cache for caching
- */
 export const apolloClient = new ApolloClient({
-  ssrMode: typeof window === "undefined", // Use SSR mode on server
+  ssrMode: typeof window === "undefined",
   link: httpLink,
   cache: new InMemoryCache(),
   defaultOptions: {
     watchQuery: {
-      fetchPolicy: "network-only", // Always fetch from network
-      errorPolicy: "all", // Return all errors
+      fetchPolicy: "network-only",
+      errorPolicy: "all",
     },
     query: {
       fetchPolicy: "network-only",
       errorPolicy: "all",
     },
     mutate: {
-      errorPolicy: "all",
+      // "none" makes Apollo throw ApolloError on GraphQL errors
+      // so try/catch in your hooks/pages actually fires
+      errorPolicy: "none",
     },
   },
 });
 
-/**
- * Test GraphQL Connection
- * Useful for debugging connection issues
- */
 export const testGraphQLConnection = async (): Promise<boolean> => {
   if (typeof window === "undefined") return false;
 
@@ -69,12 +49,8 @@ export const testGraphQLConnection = async (): Promise<boolean> => {
 
     const response = await fetch(getGraphQLUri(), {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query: "{ __typename }",
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: "{ __typename }" }),
     });
 
     if (response.ok) {
@@ -103,10 +79,6 @@ export const testGraphQLConnection = async (): Promise<boolean> => {
   }
 };
 
-/**
- * Auto-test connection on client-side (for debugging)
- * Runs once after component mount
- */
 if (typeof window !== "undefined") {
   setTimeout(() => {
     testGraphQLConnection();

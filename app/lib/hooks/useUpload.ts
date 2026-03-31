@@ -1,11 +1,13 @@
-// lib/hooks/useUpload.ts
 "use client";
+
 import { useMutation } from "@apollo/client/react";
 import { UPLOAD_PROFILE_PICTURE_MUTATION } from "../graphql/mutations/upload.mutations";
 
+type UploadResponse = { url: string; publicId: string };
+
 export const useUploadProfilePicture = () => {
   const [uploadMutation, { loading, error }] = useMutation<{
-    uploadProfilePicture: { url: string; publicId: string };
+    uploadProfilePicture: UploadResponse;
   }>(UPLOAD_PROFILE_PICTURE_MUTATION);
 
   return {

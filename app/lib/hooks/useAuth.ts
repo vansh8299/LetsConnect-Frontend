@@ -1,4 +1,3 @@
-// lib/hooks/useAuth.ts
 "use client";
 
 import { useMutation, useQuery } from "@apollo/client/react";
@@ -18,7 +17,6 @@ import {
   UpdateProfileInput,
 } from "../types/auth.types";
 
-// Custom hook for signup
 export const useSignup = () => {
   const [signup, { loading, error, data }] = useMutation<{
     signup: AuthPayload;
@@ -35,7 +33,6 @@ export const useSignup = () => {
   };
 };
 
-// Custom hook for login
 export const useLogin = () => {
   const [login, { loading, error, data }] = useMutation<{ login: AuthPayload }>(
     LOGIN_MUTATION,
@@ -44,7 +41,6 @@ export const useLogin = () => {
   return {
     login: async (input: LoginInput) => {
       const result = await login({ variables: input });
-      // Backend sets HTTP-only cookies automatically
       return result.data?.login;
     },
     loading,
@@ -53,7 +49,6 @@ export const useLogin = () => {
   };
 };
 
-// Custom hook for getting current user
 export const useMe = () => {
   const { data, loading, error, refetch } = useQuery<{ me: User }>(ME_QUERY, {
     errorPolicy: "all",
@@ -67,7 +62,6 @@ export const useMe = () => {
   };
 };
 
-// Custom hook for refreshing token
 export const useRefreshToken = () => {
   const [refresh, { loading, error }] = useMutation<{ refresh: AuthPayload }>(
     REFRESH_TOKEN_MUTATION,
@@ -76,7 +70,6 @@ export const useRefreshToken = () => {
   return {
     refreshToken: async (refreshToken: string) => {
       const result = await refresh({ variables: { refreshToken } });
-      // Backend updates HTTP-only cookies automatically
       return result.data?.refresh;
     },
     loading,
@@ -84,7 +77,6 @@ export const useRefreshToken = () => {
   };
 };
 
-// Custom hook for updating profile
 export const useUpdateProfile = () => {
   const [updateProfile, { loading, error, data }] = useMutation<{
     updateProfile: User;
@@ -101,13 +93,11 @@ export const useUpdateProfile = () => {
   };
 };
 
-// Custom hook for logout
 export const useLogout = () => {
   const [logout, { loading, error }] = useMutation(LOGOUT_MUTATION);
 
   return {
     logout: async () => {
-      // Backend clears HTTP-only cookies automatically
       await logout();
     },
     loading,

@@ -10,7 +10,24 @@ export const ME_QUERY = gql`
       about
       profilePicture
       googleId
-      status
+      createdAt
+      updatedAt
+    }
+  }
+`;
+export const GET_ALL_USERS_QUERY = gql`
+  query GetAllUsers {
+    users {
+      id
+      email
+      name
+      about
+      profilePicture
+      googleId
+      isVerified
+      isOnline
+      lastSeen
+      friendRequestStatus
       createdAt
       updatedAt
     }

@@ -6,7 +6,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Protected routes
-  const protectedRoutes = ["/dashboard", "/profile", "/settings"];
+  const protectedRoutes = ["/chats", "/profile", "/dashboard", "/settings"];
   const authRoutes = ["/login", "/signup"];
 
   const isProtectedRoute = protectedRoutes.some((route) =>
@@ -29,10 +29,9 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/dashboard/:path*",
+    "/chats/:path*",
     "/profile/:path*",
+    "/dashboard/:path*",
     "/settings/:path*",
-    "/login",
-    "/signup",
   ],
 };

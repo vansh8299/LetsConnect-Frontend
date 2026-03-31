@@ -1,7 +1,7 @@
-// app/layout.tsx
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "sonner";
 import { ThemeProvider } from "./components/ui/ThemeProvider";
 import { AuthProvider } from "./context/AuthContext";
 import { ApolloWrapper } from "./components/ApolloProvider";
@@ -41,6 +41,7 @@ export default function RootLayout({
             <AuthProvider>{children}</AuthProvider>
           </ThemeProvider>
         </ApolloWrapper>
+        <Toaster position="top-right" richColors closeButton />
       </body>
     </html>
   );

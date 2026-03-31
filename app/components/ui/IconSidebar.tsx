@@ -1,17 +1,20 @@
 "use client";
 
-import { MessageSquare, Radio, Users, User } from "lucide-react";
+import { MessageSquare, Radio, Users, User, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 interface IconSidebarProps {
-  currentUser: {
-    name: string;
-    profilePicture: string;
-  };
+  currentUser: { name: string; profilePicture: string };
+  pendingRequestCount?: number;
+  onTabChange: (tab: string) => void;
 }
 
-const IconSidebar = ({ currentUser }: IconSidebarProps) => {
+const IconSidebar = ({
+  currentUser,
+  pendingRequestCount = 0,
+  onTabChange,
+}: IconSidebarProps) => {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<
     "chats" | "status" | "users" | "profile"
@@ -25,9 +28,9 @@ const IconSidebar = ({ currentUser }: IconSidebarProps) => {
 
   const handleProfileClick = () => {
     setActiveTab("profile");
+    onTabChange?.("profile");
     router.push("/profile");
   };
-
   return (
     <div className="flex h-screen w-16 flex-col items-center justify-between border-r border-slate-200 bg-gradient-to-b from-indigo-600 to-purple-700 py-6 dark:border-slate-800 dark:from-indigo-900 dark:to-purple-900">
       {/* Top Menu Items */}
@@ -39,7 +42,10 @@ const IconSidebar = ({ currentUser }: IconSidebarProps) => {
           return (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => {
+                setActiveTab(item.id);
+                onTabChange?.(item.id);
+              }}
               className={`group relative flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-200 ${
                 isActive
                   ? "bg-white text-indigo-600 shadow-lg dark:bg-slate-800 dark:text-indigo-400"
@@ -59,6 +65,18 @@ const IconSidebar = ({ currentUser }: IconSidebarProps) => {
       </div>
 
       {/* Bottom Profile */}
+      <button
+        onClick={() => onTabChange("requests")}
+        className="relative w-10 h-10 rounded-2xl flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+        title="Friend requests"
+      >
+        <UserPlus className="h-5 w-5" />
+        {pendingRequestCount > 0 && (
+          <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
+            {pendingRequestCount > 9 ? "9+" : pendingRequestCount}
+          </span>
+        )}
+      </button>
       <button
         onClick={handleProfileClick}
         className={`group relative flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-200 ${
